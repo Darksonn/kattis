@@ -13,28 +13,27 @@ fn gcd(mut a: u64, mut b: u64) -> u64 {
 struct State {
     seen: HashSet<u64>,
     intervals: Vec<u64>,
-    intervals_to: Vec<u64>,
 }
 impl State {
     pub fn new() -> Self {
         Self {
             seen: HashSet::with_capacity(61 * 5 * 100000),
             intervals: Vec::with_capacity(61),
-            intervals_to: Vec::with_capacity(61),
         }
     }
     pub fn insert(&mut self, item: u64) {
-        self.seen.insert(item);
-        for other in self.intervals.iter().copied() {
-            let n = gcd(item, other);
-            self.seen.insert(n);
-            self.intervals_to.push(n);
+        let mut prev = 0;
+        for other in self.intervals.iter_mut() {
+            let new = gcd(item, *other);
+            *other = new;
+            if new != prev {
+                self.seen.insert(new);
+            }
+            prev = new;
         }
-        self.intervals_to.push(item);
-        self.intervals_to.sort_unstable();
-        self.intervals_to.dedup();
-        std::mem::swap(&mut self.intervals, &mut self.intervals_to);
-        self.intervals_to.clear();
+        self.intervals.push(item);
+        self.intervals.dedup();
+        self.seen.insert(item);
     }
 }
 
