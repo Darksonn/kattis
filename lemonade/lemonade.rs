@@ -6,40 +6,52 @@ struct Kind(usize);
 
 struct Graph {
     kinds: HashMap<String, Kind>,
-    next_kind: Kind,
     exchange: Vec<f64>,
 }
 
 impl Graph {
-    pub fn new() -> Self {
-        let mut kinds = HashMap::new();
+    pub fn new(size: usize) -> Self {
+        let mut kinds = HashMap::with_capacity(size);
         kinds.insert(String::from("pink"), Kind(0));
+
+        let mut exchange = Vec::with_capacity(size);
+        exchange.push(0.0);
+
         Self {
             kinds,
-            next_kind: Kind(1),
-            exchange: vec![0.0],
+            exchange,
+        }
+    }
+
+    pub fn get_exch(&self, kind: Kind) -> f64 {
+        unsafe {
+            *self.exchange.get_unchecked(kind.0)
+        }
+    }
+    pub fn set_exch(&mut self, kind: Kind, val: f64) {
+        unsafe {
+            *self.exchange.get_unchecked_mut(kind.0) = val;
         }
     }
 
     pub fn add_edge(&mut self, from: &str, to: &str, exch: f64) {
         let from_idx = match self.kinds.get(from) {
-            Some(from_idx) => from_idx,
+            Some(from_idx) => *from_idx,
             None => return, // We don't have any of this kind, so this is not usable
         };
 
-        let past_exch = self.exchange[from_idx.0];
+        let past_exch = self.get_exch(from_idx);
         let exchange = exch + past_exch;
 
-        match self.kinds.get(to) {
+        match self.kinds.get(to).map(|to_idx| *to_idx) {
             Some(to_idx) => {
-                let prev_exchange = self.exchange[to_idx.0];
+                let prev_exchange = self.get_exch(to_idx);
                 if exchange > prev_exchange {
-                    self.exchange[to_idx.0] = exchange;
+                    self.set_exch(to_idx, exchange);
                 }
             }
             None => {
-                let kind = self.next_kind;
-                self.next_kind = Kind(kind.0 + 1);
+                let kind = Kind(self.exchange.len());
 
                 self.kinds.insert(to.to_string(), kind);
                 self.exchange.push(exchange);
@@ -57,7 +69,7 @@ fn main() {
     stdin.read_line(&mut buf).unwrap();
     let n = buf.trim().parse().unwrap();
 
-    let mut graph = Graph::new();
+    let mut graph = Graph::new(n);
 
     for _ in 0..n {
         buf.clear();
@@ -78,7 +90,7 @@ fn main() {
             return;
         }
     };
-    let blue = graph.exchange[blue_kind.0].exp2();
+    let blue = graph.get_exch(*blue_kind).exp2();
     if blue > 10.0 {
         println!("10.0");
     } else {
